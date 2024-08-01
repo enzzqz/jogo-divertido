@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogos Divertidos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #282c34;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        h1, h2 {
+            margin-bottom: 20px;
+        }
+        .game-container {
+            margin: 20px;
+        }
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        .buttons button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        /* Estilos dos botões do Pedra, Papel e Tesoura */
+        #pedra { background-color: #d9534f; }
+        #papel { background-color: #5bc0de; }
+        #tesoura { background-color: #5cb85c; }
+        /* Estilos dos botões do Adivinhe o Número */
+        .button-1 { background-color: #f0ad4e; }
+        .button-2 { background-color: #5bc0de; }
+        .button-3 { background-color: #5cb85c; }
+        .button-4 { background-color: #d9534f; }
+        .button-5 { background-color: #f0ad4e; }
+        .button-6 { background-color: #5bc0de; }
+        .button-7 { background-color: #5cb85c; }
+        .button-8 { background-color: #d9534f; }
+        .button-9 { background-color: #f0ad4e; }
+        .button-10 { background-color: #5bc0de; }
+        /* Estilos dos botões do Quiz */
+        .quiz-option {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .quiz-option-a { background-color: #d9534f; }
+        .quiz-option-b { background-color: #5bc0de; }
+        .quiz-option-c { background-color: #5cb85c; }
+        .quiz-option-d { background-color: #f0ad4e; }
+        /* Estilos dos botões do Forca */
+        .hangman-letter {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .hangman-letter:hover {
+            background-color: #333;
+        }
+        .result-box, .hangman-message {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #fff;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+    <script>
+        let hangmanWord = "";
+        let hangmanWordDisplay = "";
+        let hangmanAttempts = 0;
+        let hangmanUsedLetters = [];
+        let currentQuestion = "";
+        let currentAnswers = {};
+        let currentCorrectAnswer = "";
+
+        function playRPS(choice) {
+            fetch('/play_rps', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ choice: choice })
+            })
+            .then(response => response.json())
+            .then(result => {
+                document.getElementById('result').innerHTML = 
+                    `<div class="result-box">
+                        <p>Você escolheu: ${result.user_choice}</p>
+                        <p>Computador escolheu: ${result.computer_choice}</p>
+                        <p>Resultado: ${result.result}</p>
+                    </div>`;
+
+                updateScoreboard(result.result);
+                updateHistory(result.user_choice, result.computer_choice, result.result);
+            });
+        }
+
+        function updateScoreboard(result) {
+            let wins = parseInt(document.getElementById('scoreboard').children[0].innerText.split(': ')[1]);
+            let losses = parseInt(document.getElementById('scoreboard').children[1].innerText.split(': ')[1]);
+            let ties = parseInt(document.getElementById('scoreboard').children[2].innerText.split(': ')[1]);
+
+            if (result === "você ganhou") {
+                wins++;
+            } else if (result === "você perdeu") {
+                losses++;
+            } else if (result === "empate") {
+                ties++;
+            }
+
+            document.getElementById('scoreboard').innerHTML = 
+                `<div>Vitórias: ${wins}</div>
+                 <div>Derrotas: ${losses}</div>
+                 <div>Empates: ${ties}</div>`;
+        }
+
+        function updateHistory(userChoice, computerChoice, result) {
+            let history = document.getElementById('history').innerHTML;
+            history = `<ul>
+                        <li>Você: ${userChoice}, Computador: ${computerChoice}, Resultado: ${result}</li>
+                        ${history}
+                    </ul>`;
+            document.getElementById('history').innerHTML = history;
+        }
+
+        function guessNumberGame(guess) {
+            fetch('/guess_number', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ guess: guess })
+            })
+            .then(response => response.json())
+            .then(result => {
+                document.getElementById('guess-result').innerHTML = 
+                    `<div class="result-box">${result.message}</div>`;
+            });
+        }
+
+        function startQuiz() {
+            fetch('/start_quiz')
+            .then(response => response.json())
+            .then(data => {
+                currentQuestion = data.question;
+                currentAnswers = data.answers;
+                currentCorrectAnswer = data.correct_answer;
+                document.getElementById('quiz-question').innerText = currentQuestion;
+                document.querySelector('.quiz-option-a').innerText = currentAnswers.A;
+                document.querySelector('.quiz-option-b').innerText = currentAnswers.B;
+                document.querySelector('.quiz-option-c').innerText = currentAnswers.C;
+                document.querySelector('.quiz-option-d').innerText = currentAnswers.D;
+            });
+        }
+
+        function answerQuiz(answer) {
+            fetch('/answer_quiz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ answer: answer })
+            })
+            .then(response => response.json())
+            .then(result => {
+                document.getElementById('quiz-result').innerHTML = 
+                    `<div class="result-box">${result.message}</div>`;
+            });
+        }
+
+        function startHangman() {
+            fetch('/start_hangman')
+            .then(response => response.json())
+            .then(data => {
+                hangmanWord = data.word;
+                hangmanWordDisplay = "_".repeat(hangmanWord.length);
+                hangmanAttempts = 6;
+                hangmanUsedLetters = [];
+                updateHangmanDisplay();
+            });
+        }
+
+        function guessHangman(letter) {
+            fetch('/guess_hangman', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ letter: letter })
+            })
+            .then(response => response.json())
+            .then(result => {
+                hangmanWordDisplay = result.word_display;
+                hangmanAttempts = result.attempts;
+                hangmanUsedLetters = result.used_letters;
+                document.getElementById('hangman-display').innerText = hangmanWordDisplay;
+                document.getElementById('hangman-attempts').innerText = "Tentativas restantes: " + hangmanAttempts;
+                document.getElementById('hangman-used-letters').innerText = "Letras usadas: " + hangmanUsedLetters.join(", ");
+                document.getElementById('hangman-message').innerText = result.message;
+
+                if (result.game_over) {
+                    document.getElementById('hangman-message').innerHTML += "<br><button onclick='startHangman()'>Jogar Novamente</button>";
+                }
+            });
+        }
+
+        function updateHangmanDisplay() {
+            document.getElementById('hangman-display').innerText = hangmanWordDisplay;
+            document.getElementById('hangman-attempts').innerText = "Tentativas restantes: " + hangmanAttempts;
+            document.getElementById('hangman-used-letters').innerText = "Letras usadas: " + hangmanUsedLetters.join(", ");
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Jogos Divertidos</h1>
+
+        <!-- Pedra, Papel e Tesoura -->
+        <div class="game-container">
+            <h2>Pedra, Papel e Tesoura</h2>
+            <div class="buttons">
+                <button id="pedra" onclick="playRPS('pedra')">Pedra</button>
+                <button id="papel" onclick="playRPS('papel')">Papel</button>
+                <button id="tesoura" onclick="playRPS('tesoura')">Tesoura</button>
+            </div>
+            <div id="result"></div>
+            <div id="scoreboard">
+                <div>Vitórias: 0</div>
+                <div>Derrotas: 0</div>
+                <div>Empates: 0</div>
+            </div>
+            <div id="history"></div>
+        </div>
+
+        <!-- Adivinhe o Número -->
+        <div class="game-container">
+            <h2>Adivinhe o Número</h2>
+            <div class="buttons">
+                <button class="button-1" onclick="guessNumberGame(1)">1</button>
+                <button class="button-2" onclick="guessNumberGame(2)">2</button>
+                <button class="button-3" onclick="guessNumberGame(3)">3</button>
+                <button class="button-4" onclick="guessNumberGame(4)">4</button>
+                <button class="button-5" onclick="guessNumberGame(5)">5</button>
+                <button class="button-6" onclick="guessNumberGame(6)">6</button>
+                <button class="button-7" onclick="guessNumberGame(7)">7</button>
+                <button class="button-8" onclick="guessNumberGame(8)">8</button>
+                <button class="button-9" onclick="guessNumberGame(9)">9</button>
+            </div>
+            <div id="guess-result"></div>
+        </div>
+
+        <!-- Quiz -->
+        <div class="game-container">
+            <h2>Quiz</h2>
+            <div id="quiz-question">Pergunta vai aqui</div>
+            <div class="buttons">
+                <button class="quiz-option quiz-option-a" onclick="answerQuiz('A')">A</button>
+                <button class="quiz-option quiz-option-b" onclick="answerQuiz('B')">B</button>
+                <button class="quiz-option quiz-option-c" onclick="answerQuiz('C')">C</button>
+                <button class="quiz-option quiz-option-d" onclick="answerQuiz('D')">D</button>
+            </div>
+            <div id="quiz-result"></div>
+        </div>
+
+        <!-- Forca -->
+        <div class="game-container">
+            <h2>Forca</h2>
+            <button class="hangman-letter" onclick="guessHangman('A')">A</button>
+            <button class="hangman-letter" onclick="guessHangman('B')">B</button>
+            <button class="hangman-letter" onclick="guessHangman('C')">C</button>
+            <button class="hangman-letter" onclick="guessHangman('D')">D</button>
+            <button class="hangman-letter" onclick="guessHangman('E')">E</button>
+            <button class="hangman-letter" onclick="guessHangman('F')">F</button>
+            <button class="hangman-letter" onclick="guessHangman('G')">G</button>
+            <button class="hangman-letter" onclick="guessHangman('H')">H</button>
+            <button class="hangman-letter" onclick="guessHangman('I')">I</button>
+            <button class="hangman-letter" onclick="guessHangman('J')">J</button>
+            <button class="hangman-letter" onclick="guessHangman('K')">K</button>
+            <button class="hangman-letter" onclick="guessHangman('L')">L</button>
+            <button class="hangman-letter" onclick="guessHangman('M')">M</button>
+            <button class="hangman-letter" onclick="guessHangman('N')">N</button>
+            <button class="hangman-letter" onclick="guessHangman('O')">O</button>
+            <button class="hangman-letter" onclick="guessHangman('P')">P</button>
+            <button class="hangman-letter" onclick="guessHangman('Q')">Q</button>
+            <button class="hangman-letter" onclick="guessHangman('R')">R</button>
+            <button class="hangman-letter" onclick="guessHangman('S')">S</button>
+            <button class="hangman-letter" onclick="guessHangman('T')">T</button>
+            <button class="hangman-letter" onclick="guessHangman('U')">U</button>
+            <button class="hangman-letter" onclick="guessHangman('V')">V</button>
+            <button class="hangman-letter" onclick="guessHangman('W')">W</button>
+            <button class="hangman-letter" onclick="guessHangman('X')">X</button>
+            <button class="hangman-letter" onclick="guessHangman('Y')">Y</button>
+            <button class="hangman-letter" onclick="guessHangman('Z')">Z</button>
+            <div id="hangman-display"></div>
+            <div id="hangman-attempts">Tentativas restantes: </div>
+            <div id="hangman-used-letters">Letras usadas: </div>
+            <div id="hangman-message" class="hangman-message"></div>
+            <button onclick="startHangman()">Iniciar Forca</button>
+        </div>
+    </div>
+</body>
+</html>
